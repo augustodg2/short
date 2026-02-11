@@ -17,9 +17,7 @@ export const config = [
     plugins: {
       turbo: turboPlugin,
     },
-    rules: {
-      "turbo/no-undeclared-env-vars": "warn",
-    },
+    rules: {},
   },
   {
     plugins: {

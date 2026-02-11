@@ -39,6 +39,7 @@ export const nextJsConfig = [
       "@next/next": pluginNext,
     },
     rules: {
+      "turbo/no-undeclared-env-vars": "warn",
       ...pluginNext.configs.recommended.rules,
       ...pluginNext.configs["core-web-vitals"].rules,
     },
