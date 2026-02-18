@@ -5,7 +5,7 @@ services:
       dockerfile: ./apps/api/Dockerfile
     ports:
       - "5000:5000"
-    env_file: ./apps/api/.env
+    env_file: ./apps/api/.env.docker
     depends_on:
       - postgres
 
