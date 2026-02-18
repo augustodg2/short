@@ -4,7 +4,7 @@
   "description": "",
   "scripts": {
     "start": "node dist/main.js",
-    "build": "tsc",
+    "build": "prisma generate && tsc",
     "dev": "tsx watch src/main.ts",
     "type-check": "tsc --noEmit",
     "lint": "eslint src/ --max-warnings 0"
