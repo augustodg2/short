@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "",
   "scripts": {
-    "start": "node dist/main.js",
+    "start": "prisma migrate deploy && node dist/main.js",
     "build": "prisma generate && tsc",
     "dev": "tsx watch src/main.ts",
     "type-check": "tsc --noEmit",
