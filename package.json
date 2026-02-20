@@ -6,14 +6,14 @@
     "dev": "turbo run dev",
     "lint": "turbo run lint",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
-    "check-types": "turbo run check-types"
+    "type-check": "turbo run type-check"
   },
   "devDependencies": {
     "prettier": "^3.7.4",
     "turbo": "^2.8.6",
     "typescript": "^5.9.3"
   },
-  "packageManager": "pnpm@9.0.0",
+  "packageManager": "pnpm@10.30.1",
   "engines": {
     "node": ">=18"
   }
