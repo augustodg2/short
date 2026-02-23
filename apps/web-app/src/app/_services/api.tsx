@@ -1,3 +1,5 @@
+import { withAuth } from "@workos-inc/authkit-nextjs";
+
 export type JSONValue =
   | string
   | number
@@ -8,12 +10,20 @@ export type JSONValue =
     };
 
 export async function requestApi<T>(url: string, init?: RequestInit) {
+  const { accessToken } = await withAuth();
+
+  const headers = new Headers({
+    ...init?.headers,
+    "Content-Type": "application/json",
+  });
+
+  if (accessToken) {
+    headers.set("Authorization", `Bearer ${accessToken}`);
+  }
+
   const response = await fetch(`/api${url}`, {
     ...init,
-    headers: {
-      ...init?.headers,
-      "Content-Type": "application/json",
-    },
+    headers,
   });
 
   let responseBody: JSONValue | null = null;
