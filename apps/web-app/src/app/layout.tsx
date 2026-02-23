@@ -1,8 +1,11 @@
 import "./globals.css";
 
+import { Code2 } from "lucide-react";
 import type { Metadata } from "next";
-import { Providers } from "./_context/providers";
+import Link from "next/link";
 import { Header } from "./_components/Header";
+import { Providers } from "./_context/providers";
+import { Footer } from "./_components/Footer";
 
 export const metadata: Metadata = {
   title: "Create Next App",
@@ -15,13 +18,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body>
-        <Providers>
+    <Providers>
+      <html lang="en">
+        <body className="flex min-h-screen flex-col">
           <Header />
-          <div className="p-4">{children}</div>
-        </Providers>
-      </body>
-    </html>
+          <main className="flex-1 p-4">{children}</main>
+          <Footer />
+        </body>
+      </html>
+    </Providers>
   );
 }

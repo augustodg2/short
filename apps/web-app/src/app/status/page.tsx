@@ -29,7 +29,7 @@ export default function StatusPage() {
 
   return (
     <div className="container m-auto mt-4">
-      <h1>Status</h1>
+      <h1>Service status</h1>
 
       <Table className="table-fixed">
         <TableHeader>

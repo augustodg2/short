@@ -1,16 +1,17 @@
-import Link from "next/link";
+import { withAuth } from "@workos-inc/authkit-nextjs";
+import { getFullName } from "./auth/_utils/user";
 
-export default function Home() {
+export default async function Home() {
+  const { user } = await withAuth({ ensureSignedIn: true });
+
+  const fullName = getFullName(user);
+
   return (
     <div className="container m-auto mt-4">
-      <h1>Short</h1>
-
-      <Link
-        href="/status"
-        className="text-blue-500 no-underline hover:text-blue-700 hover:underline"
-      >
-        Status
-      </Link>
+      <h1>Welcome back{fullName ? `, ${fullName}` : ""}</h1>
+      {!user.emailVerified ? (
+        <p>Please verify your email: {user.email}</p>
+      ) : null}
     </div>
   );
 }
