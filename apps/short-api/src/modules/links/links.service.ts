@@ -61,7 +61,7 @@ export async function resolveLink(
 
   await redis.setex(
     cacheKey,
-    env.CACHE_TTL_SECONDS,
+    env.LINK_CACHE_TTL_SECONDS,
     JSON.stringify({ url: link.url }),
   );
 
