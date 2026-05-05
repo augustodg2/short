@@ -14,5 +14,5 @@ app.get("/health", async () => {
 });
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  await app.listen({ port: Number(env.PORT), host: env.HOST });
+  await app.listen({ port: env.PORT, host: env.HOST });
 }

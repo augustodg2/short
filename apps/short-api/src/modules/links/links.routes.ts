@@ -1,6 +1,6 @@
 import { FastifyInstance } from "fastify";
 import { createLinkSchema } from "./links.schema.js";
-import { createLink, getLink } from "./links.service.js";
+import { createLink, resolveLink } from "./links.service.js";
 
 export async function linksRoutes(app: FastifyInstance) {
   app.post("/links", async (request, reply) => {
@@ -20,7 +20,7 @@ export async function linksRoutes(app: FastifyInstance) {
     async (request, reply) => {
       const { slug } = request.params;
 
-      const link = await getLink(slug);
+      const link = await resolveLink(slug);
 
       if (!link) {
         return reply.notFound("Link not found");
