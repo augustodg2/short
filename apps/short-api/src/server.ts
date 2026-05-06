@@ -10,15 +10,17 @@ export const app = Fastify({ logger: true, trustProxy: true });
 
 app.register(sensible);
 
-app.register(rateLimit, {
-  redis: new Redis(env.REDIS_URL, {
-    maxRetriesPerRequest: 1,
-    connectTimeout: 500,
-  }),
-  skipOnError: true,
-  max: env.GLOBAL_RATE_LIMIT_MAX,
-  timeWindow: env.GLOBAL_RATE_LIMIT_TIME_WINDOW_MS,
-});
+if (process.env.NODE_ENV != "test") {
+  app.register(rateLimit, {
+    redis: new Redis(env.REDIS_URL, {
+      maxRetriesPerRequest: 1,
+      connectTimeout: 500,
+    }),
+    skipOnError: true,
+    max: env.GLOBAL_RATE_LIMIT_MAX,
+    timeWindow: env.GLOBAL_RATE_LIMIT_TIME_WINDOW_MS,
+  });
+}
 
 app.register(linksRoutes);
 

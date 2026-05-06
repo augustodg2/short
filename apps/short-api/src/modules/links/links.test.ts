@@ -1,4 +1,4 @@
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 import { app } from "../../server.js";
 
 describe("POST /links", () => {
@@ -6,7 +6,7 @@ describe("POST /links", () => {
     const response = await app.inject({
       method: "POST",
       url: "/links",
-      body: { url: "https://example.com" },
+      body: { url: "https://example.com", expiresAt: null },
     });
 
     expect(response.statusCode).toBe(201);
@@ -18,11 +18,33 @@ describe("POST /links", () => {
     const response = await app.inject({
       method: "POST",
       url: "/links",
-      body: { url: "invalid url" },
+      body: { url: "invalid url", expiresAt: null },
     });
 
     expect(response.statusCode).toBe(400);
     expect(response.json().message).toBe("Invalid URL");
+  });
+
+  test("should return 400 for expiry date in the past", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+
+    const today = new Date(2026, 4, 6);
+    const yesterday = new Date(2026, 4, 5);
+
+    vi.setSystemTime(today);
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/links",
+      body: { url: "https://example.com", expiresAt: yesterday.toISOString() },
+    });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json().message).toBe(
+      "Expiration date should be in the future",
+    );
+
+    vi.useRealTimers();
   });
 });
 
@@ -31,7 +53,7 @@ describe("GET /links/:slug/resolve", () => {
     const createLinkResponse = await app.inject({
       method: "POST",
       url: "/links",
-      body: { url: "https://example.com" },
+      body: { url: "https://example.com", expiresAt: null },
     });
 
     const { slug } = createLinkResponse.json();
@@ -53,5 +75,33 @@ describe("GET /links/:slug/resolve", () => {
 
     expect(redirectResponse.statusCode).toBe(404);
     expect(redirectResponse.json().message).toBe("Link not found");
+  });
+
+  test("should return 410 for expired link", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+
+    const yesterday = new Date(2026, 4, 5);
+    const today = new Date(2026, 4, 6);
+
+    vi.setSystemTime(yesterday);
+
+    const createLinkResponse = await app.inject({
+      method: "POST",
+      url: "/links",
+      body: { url: "https://example.com", expiresAt: today.toISOString() },
+    });
+
+    vi.setSystemTime(today);
+
+    const { slug } = createLinkResponse.json();
+
+    const redirectResponse = await app.inject({
+      method: "GET",
+      url: `/links/${slug}/resolve`,
+    });
+
+    expect(redirectResponse.statusCode).toBe(410);
+
+    vi.useRealTimers();
   });
 });

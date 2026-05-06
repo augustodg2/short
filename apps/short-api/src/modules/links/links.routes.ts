@@ -2,6 +2,7 @@ import { FastifyInstance } from "fastify";
 import { createLinkSchema } from "./links.schema.js";
 import { createLink, resolveLink } from "./links.service.js";
 import { env } from "../../config/env.js";
+import { ExpiredLinkError } from "./errors/ExpiredLinkError.js";
 
 export async function linksRoutes(app: FastifyInstance) {
   app.post(
@@ -32,13 +33,21 @@ export async function linksRoutes(app: FastifyInstance) {
     async (request, reply) => {
       const { slug } = request.params;
 
-      const link = await resolveLink(slug);
+      try {
+        const link = await resolveLink(slug);
 
-      if (!link) {
-        return reply.notFound("Link not found");
+        if (!link) {
+          return reply.notFound("Link not found");
+        }
+
+        return { url: link.url };
+      } catch (error) {
+        if (error instanceof ExpiredLinkError) {
+          return reply.gone();
+        }
+
+        throw error;
       }
-
-      return { url: link.url };
     },
   );
 }

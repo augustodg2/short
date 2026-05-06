@@ -5,6 +5,7 @@ import { db } from "../../db/index.js";
 import { links } from "../../db/schema.js";
 import { redis } from "../../cache/index.js";
 import { env } from "../../config/env.js";
+import { ExpiredLinkError } from "./errors/ExpiredLinkError.js";
 
 const generateSlug = customAlphabet(
   // Excludes: 0, O, o, l, 1, I (ambiguous characters)
@@ -22,17 +23,20 @@ export async function createLink(input: CreateLinkInput) {
       id,
       slug,
       url: input.url,
-      expiresAt: input.expiresAt ? new Date(input.expiresAt) : null,
+      expiresAt: input.expiresAt,
     })
     .returning();
 
   return link;
 }
 
-export async function resolveLink(
+async function getLink(
   slug: string,
   options: { useCache?: boolean } = { useCache: true },
-): Promise<{ url: string } | null> {
+): Promise<{
+  url: string;
+  expiresAt: Date | null;
+}> {
   const cacheKey = `short:slug:${slug}`;
 
   if (options?.useCache) {
@@ -44,7 +48,10 @@ export async function resolveLink(
 
         const parsed = JSON.parse(cached);
 
-        return { url: parsed.url };
+        return {
+          url: parsed.url,
+          expiresAt: parsed.expiresAt ? new Date(parsed.expiresAt) : null,
+        };
       }
     } catch (error) {
       console.warn("Redis error, falling back to DB.", error);
@@ -55,14 +62,29 @@ export async function resolveLink(
 
   const [link] = await db.select().from(links).where(eq(links.slug, slug));
 
+  return link;
+}
+
+export async function resolveLink(
+  slug: string,
+  options: { useCache?: boolean } = { useCache: true },
+): Promise<{ url: string } | null> {
+  const cacheKey = `short:slug:${slug}`;
+
+  const link = await getLink(slug, options);
+
   if (!link) {
     return null;
+  }
+
+  if (link.expiresAt && link.expiresAt < new Date()) {
+    throw new ExpiredLinkError();
   }
 
   await redis.setex(
     cacheKey,
     env.LINK_CACHE_TTL_SECONDS,
-    JSON.stringify({ url: link.url }),
+    JSON.stringify({ url: link.url, expiresAt: link.expiresAt }),
   );
 
   return { url: link.url };
