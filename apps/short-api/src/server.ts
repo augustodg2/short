@@ -22,9 +22,7 @@ app.register(rateLimit, {
 
 app.register(linksRoutes);
 
-app.get("/health", async () => {
-  ({ status: "ok" });
-});
+app.get("/health", async () => ({ status: "ok" }));
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   await app.listen({ port: env.PORT, host: env.HOST });
