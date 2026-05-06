@@ -7,8 +7,16 @@ const schema = z.object({
   DATABASE_URL: z.string().min(1),
   REDIS_URL: z.string().min(1),
   LINK_CACHE_TTL_SECONDS: z.coerce.number().positive().default(3600),
-  CREATE_LINK_RATE_LIMIT_TTL_SECONDS: z.coerce.number().positive().default(60),
+  CREATE_LINK_RATE_LIMIT_TIME_WINDOW_MS: z.coerce
+    .number()
+    .positive()
+    .default(60_000),
   CREATE_LINK_RATE_LIMIT_MAX: z.coerce.number().positive().default(10),
+  GLOBAL_RATE_LIMIT_TIME_WINDOW_MS: z.coerce
+    .number()
+    .positive()
+    .default(60_000),
+  GLOBAL_RATE_LIMIT_MAX: z.coerce.number().positive().default(60),
 });
 
 export const env = schema.parse(process.env);

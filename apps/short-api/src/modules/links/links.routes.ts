@@ -1,19 +1,31 @@
 import { FastifyInstance } from "fastify";
 import { createLinkSchema } from "./links.schema.js";
 import { createLink, resolveLink } from "./links.service.js";
+import { env } from "../../config/env.js";
 
 export async function linksRoutes(app: FastifyInstance) {
-  app.post("/links", async (request, reply) => {
-    const input = createLinkSchema.safeParse(request.body);
+  app.post(
+    "/links",
+    {
+      config: {
+        rateLimit: {
+          max: env.CREATE_LINK_RATE_LIMIT_MAX,
+          timeWindow: env.CREATE_LINK_RATE_LIMIT_TIME_WINDOW_MS,
+        },
+      },
+    },
+    async (request, reply) => {
+      const input = createLinkSchema.safeParse(request.body);
 
-    if (!input.success) {
-      return reply.badRequest(input.error.issues[0].message);
-    }
+      if (!input.success) {
+        return reply.badRequest(input.error.issues[0].message);
+      }
 
-    const link = await createLink(input.data);
+      const link = await createLink(input.data);
 
-    return reply.code(201).send(link);
-  });
+      return reply.code(201).send(link);
+    },
+  );
 
   app.get<{ Params: { slug: string } }>(
     "/links/:slug/resolve",
