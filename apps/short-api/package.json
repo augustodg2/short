@@ -21,7 +21,8 @@
     "drizzle-orm": "^0.45.2",
     "ioredis": "^5.10.1",
     "nanoid": "^5.1.11",
-    "postgres": "^3.4.9"
+    "postgres": "^3.4.9",
+    "ua-parser-js": "^2.0.9"
   },
   "devDependencies": {
     "drizzle-kit": "^0.31.10"

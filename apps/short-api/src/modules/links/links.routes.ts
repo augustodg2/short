@@ -1,8 +1,9 @@
 import { FastifyInstance } from "fastify";
 import { createLinkSchema } from "./links.schema.js";
-import { createLink, resolveLink } from "./links.service.js";
+import { createLink, resolveLink, trackClick } from "./links.service.js";
 import { env } from "../../config/env.js";
 import { ExpiredLinkError } from "./errors/ExpiredLinkError.js";
+import { getSingleHeader } from "../../utils/getSingleHeader.js";
 
 export async function linksRoutes(app: FastifyInstance) {
   app.post(
@@ -39,6 +40,21 @@ export async function linksRoutes(app: FastifyInstance) {
         if (!link) {
           return reply.notFound("Link not found");
         }
+
+        const userAgent = getSingleHeader(request.headers, "user-agent");
+        const referrer = getSingleHeader(request.headers, "referer");
+        const country =
+          getSingleHeader(request.headers, "cf-ipcountry") ??
+          getSingleHeader(request.headers, "x-country");
+
+        trackClick({
+          linkId: link.id,
+          userAgent,
+          country,
+          referrer,
+        }).catch((error) => {
+          app.log.warn("Error trying to track click to link:", error);
+        });
 
         return { url: link.url };
       } catch (error) {

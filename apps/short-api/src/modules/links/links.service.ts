@@ -2,10 +2,11 @@ import { customAlphabet, nanoid } from "nanoid";
 import { eq } from "drizzle-orm";
 import { CreateLinkInput } from "./links.schema.js";
 import { db } from "../../db/index.js";
-import { links } from "../../db/schema.js";
+import { clicks, links } from "../../db/schema.js";
 import { redis } from "../../cache/index.js";
 import { env } from "../../config/env.js";
 import { ExpiredLinkError } from "./errors/ExpiredLinkError.js";
+import { UAParser } from "ua-parser-js";
 
 const generateSlug = customAlphabet(
   // Excludes: 0, O, o, l, 1, I (ambiguous characters)
@@ -32,6 +33,7 @@ async function getLink(
   slug: string,
   options: { useCache?: boolean } = { useCache: true },
 ): Promise<{
+  id: number;
   url: string;
   expiresAt: Date | null;
 }> {
@@ -47,6 +49,7 @@ async function getLink(
         const parsed = JSON.parse(cached);
 
         return {
+          id: parsed.id,
           url: parsed.url,
           expiresAt: parsed.expiresAt ? new Date(parsed.expiresAt) : null,
         };
@@ -66,7 +69,7 @@ async function getLink(
 export async function resolveLink(
   slug: string,
   options: { useCache?: boolean } = { useCache: true },
-): Promise<{ url: string } | null> {
+): Promise<{ id: number; url: string } | null> {
   const cacheKey = `short:slug:${slug}`;
 
   const link = await getLink(slug, options);
@@ -82,8 +85,33 @@ export async function resolveLink(
   await redis.setex(
     cacheKey,
     env.LINK_CACHE_TTL_SECONDS,
-    JSON.stringify({ url: link.url, expiresAt: link.expiresAt }),
+    JSON.stringify({ id: link.id, url: link.url, expiresAt: link.expiresAt }),
   );
 
-  return { url: link.url };
+  return { id: link.id, url: link.url };
+}
+
+export async function trackClick({
+  linkId,
+  userAgent,
+  country,
+  referrer,
+}: {
+  linkId: number;
+  userAgent: string | null;
+  country: string | null;
+  referrer: string | null;
+}) {
+  let device: string | null = null;
+
+  if (userAgent) {
+    device = UAParser(userAgent).device.type ?? null;
+  }
+
+  await db.insert(clicks).values({
+    linkId,
+    country,
+    referrer,
+    device,
+  });
 }
