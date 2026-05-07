@@ -14,13 +14,11 @@ const generateSlug = customAlphabet(
 );
 
 export async function createLink(input: CreateLinkInput) {
-  const id = nanoid();
   const slug = generateSlug();
 
   const [link] = await db
     .insert(links)
     .values({
-      id,
       slug,
       url: input.url,
       expiresAt: input.expiresAt,

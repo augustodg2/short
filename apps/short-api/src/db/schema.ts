@@ -1,9 +1,9 @@
-import { pgTable, text, timestamp, index } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, index, integer } from "drizzle-orm/pg-core";
 
 export const links = pgTable(
   "links",
   {
-    id: text("id").primaryKey(),
+    id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
     slug: text("slug").notNull().unique(),
     url: text("url").notNull(),
     expiresAt: timestamp("expires_at"),
@@ -15,8 +15,8 @@ export const links = pgTable(
 export const clicks = pgTable(
   "clicks",
   {
-    id: text("id").primaryKey(),
-    linkId: text("link_id")
+    id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+    linkId: integer("link_id")
       .notNull()
       .references(() => links.id, { onDelete: "cascade" }),
     country: text("country"),
