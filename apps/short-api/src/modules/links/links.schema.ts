@@ -4,6 +4,7 @@ export const createLinkSchema = z.object({
   url: z.url(),
   expiresAt: z.iso
     .datetime()
+    .optional()
     .nullable()
     .transform((dateString) => (dateString ? new Date(dateString) : null))
     .refine(

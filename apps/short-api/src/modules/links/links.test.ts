@@ -6,7 +6,7 @@ describe("POST /links", () => {
     const response = await app.inject({
       method: "POST",
       url: "/links",
-      body: { url: "https://example.com", expiresAt: null },
+      body: { url: "https://example.com" },
     });
 
     expect(response.statusCode).toBe(201);
@@ -18,7 +18,7 @@ describe("POST /links", () => {
     const response = await app.inject({
       method: "POST",
       url: "/links",
-      body: { url: "invalid url", expiresAt: null },
+      body: { url: "invalid url" },
     });
 
     expect(response.statusCode).toBe(400);
@@ -53,7 +53,7 @@ describe("GET /links/:slug/resolve", () => {
     const createLinkResponse = await app.inject({
       method: "POST",
       url: "/links",
-      body: { url: "https://example.com", expiresAt: null },
+      body: { url: "https://example.com" },
     });
 
     const { slug } = createLinkResponse.json();
