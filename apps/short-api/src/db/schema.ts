@@ -24,5 +24,8 @@ export const clicks = pgTable(
     device: text("device"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
-  (clicksTable) => [index("clicks_link_id_idx").on(clicksTable.linkId)],
+  (clicksTable) => [
+    index("clicks_link_id_idx").on(clicksTable.linkId),
+    index("clicks_created_at_idx").on(clicksTable.createdAt),
+  ],
 );

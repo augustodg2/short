@@ -1,0 +1,1 @@
+CREATE INDEX "clicks_created_at_idx" ON "clicks" USING btree ("created_at");
