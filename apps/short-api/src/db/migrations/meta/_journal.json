@@ -15,6 +15,13 @@
       "when": 1778163242531,
       "tag": "0001_spicy_monster_badoon",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1778368563591,
+      "tag": "0002_faulty_otto_octavius",
+      "breakpoints": true
     }
   ]
 }
