@@ -59,7 +59,7 @@ export async function linksRoutes(app: FastifyInstance) {
         return { url: link.url };
       } catch (error) {
         if (error instanceof ExpiredLinkError) {
-          return reply.gone();
+          return reply.gone("The link you are trying to resolve expired");
         }
 
         throw error;
