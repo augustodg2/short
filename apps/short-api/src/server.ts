@@ -17,9 +17,7 @@ app.setErrorHandler((error, request, reply) => {
     return reply.badRequest(error.message);
   }
 
-  return reply.internalServerError(
-    error instanceof Error ? error.message : undefined,
-  );
+  throw error;
 });
 
 if (process.env.NODE_ENV != "test") {
