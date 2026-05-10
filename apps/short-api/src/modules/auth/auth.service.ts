@@ -50,7 +50,9 @@ export async function generateTokens(user: {
       alg: "HS256",
     })
     .setIssuedAt()
-    .setExpirationTime(env.JWT_ACCESS_EXPIRY_SECONDS)
+    .setExpirationTime(
+      new Date(Date.now() + env.JWT_ACCESS_EXPIRY_SECONDS * 1000),
+    )
     .sign(accessTokenSecret);
 
   const refreshToken = await new SignJWT({
@@ -59,7 +61,9 @@ export async function generateTokens(user: {
   })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
-    .setExpirationTime(env.JWT_REFRESH_EXPIRY_SECONDS)
+    .setExpirationTime(
+      new Date(Date.now() + env.JWT_REFRESH_EXPIRY_SECONDS * 1000),
+    )
     .sign(refreshTokenSecret);
 
   return {
