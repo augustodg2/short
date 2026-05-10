@@ -1,4 +1,4 @@
-import { customAlphabet, nanoid } from "nanoid";
+import { customAlphabet } from "nanoid";
 import { eq } from "drizzle-orm";
 import { CreateLinkInput } from "./links.schema.js";
 import { db } from "../../db/index.js";

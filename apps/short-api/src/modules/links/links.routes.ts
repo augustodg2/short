@@ -1,9 +1,10 @@
 import { FastifyInstance } from "fastify";
+import { env } from "../../config/env.js";
+import { getSingleHeader } from "../../utils/getSingleHeader.js";
+import { validate } from "../../utils/validate.js";
+import { ExpiredLinkError } from "./errors/ExpiredLinkError.js";
 import { createLinkSchema } from "./links.schema.js";
 import { createLink, resolveLink, trackClick } from "./links.service.js";
-import { env } from "../../config/env.js";
-import { ExpiredLinkError } from "./errors/ExpiredLinkError.js";
-import { getSingleHeader } from "../../utils/getSingleHeader.js";
 
 export async function linksRoutes(app: FastifyInstance) {
   app.post(
@@ -17,13 +18,9 @@ export async function linksRoutes(app: FastifyInstance) {
       },
     },
     async (request, reply) => {
-      const input = createLinkSchema.safeParse(request.body);
+      const input = validate(request.body, createLinkSchema);
 
-      if (!input.success) {
-        return reply.badRequest(input.error.issues[0].message);
-      }
-
-      const link = await createLink(input.data);
+      const link = await createLink(input);
 
       return reply.code(201).send(link);
     },
