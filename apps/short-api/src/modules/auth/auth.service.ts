@@ -4,8 +4,9 @@ import { SignJWT } from "jose";
 import { env } from "../../config/env.js";
 import { db } from "../../db/index.js";
 import { users } from "../../db/schema.js";
-import { RegisterUserInput } from "./auth.schema.js";
+import { LoginInput, RegisterUserInput } from "./auth.schema.js";
 import { EmailAlreadyInUseError } from "./errors/EmailAlreadyInUseError.js";
+import { InvalidCredentialsError } from "./errors/InvalidCredentialsError.js";
 
 type Tokens = {
   accessToken: string;
@@ -79,6 +80,22 @@ export async function registerUser(input: RegisterUserInput): Promise<Tokens> {
   }
 
   const user = await createUser(input);
+
+  return generateTokens(user);
+}
+
+export async function login(input: LoginInput): Promise<Tokens> {
+  const user = await getUserByEmail(input.email);
+
+  if (!user) {
+    throw new InvalidCredentialsError();
+  }
+
+  const passwordMatch = await argon2.verify(user.passwordHash, input.password);
+
+  if (!passwordMatch) {
+    throw new InvalidCredentialsError();
+  }
 
   return generateTokens(user);
 }
