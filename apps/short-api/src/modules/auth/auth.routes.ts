@@ -7,35 +7,51 @@ import { EmailAlreadyInUseError } from "./errors/EmailAlreadyInUseError.js";
 import { validate } from "../../utils/validate.js";
 
 export async function authRoutes(app: FastifyInstance) {
-  app.post("/auth/register", async (request, reply) => {
-    try {
-      const input = validate(request.body, registerUserInputSchema);
+  app.post(
+    "/auth/register",
+    {
+      config: {
+        public: true,
+      },
+    },
+    async (request, reply) => {
+      try {
+        const input = validate(request.body, registerUserInputSchema);
 
-      const tokens = await registerUser(input);
+        const tokens = await registerUser(input);
 
-      return tokens;
-    } catch (error) {
-      if (error instanceof EmailAlreadyInUseError) {
-        return reply.conflict(error.message);
+        return tokens;
+      } catch (error) {
+        if (error instanceof EmailAlreadyInUseError) {
+          return reply.conflict(error.message);
+        }
+
+        throw error;
       }
+    },
+  );
 
-      throw error;
-    }
-  });
+  app.post(
+    "/auth/login",
+    {
+      config: {
+        public: true,
+      },
+    },
+    async (request, reply) => {
+      try {
+        const input = validate(request.body, loginInputSchema);
 
-  app.post("/auth/login", async (request, reply) => {
-    try {
-      const input = validate(request.body, loginInputSchema);
+        const tokens = await login(input);
 
-      const tokens = await login(input);
+        return tokens;
+      } catch (error) {
+        if (error instanceof InvalidCredentialsError) {
+          return reply.unauthorized(error.message);
+        }
 
-      return tokens;
-    } catch (error) {
-      if (error instanceof InvalidCredentialsError) {
-        return reply.unauthorized(error.message);
+        throw error;
       }
-
-      throw error;
-    }
-  });
+    },
+  );
 }

@@ -1,12 +1,13 @@
 import argon2 from "argon2";
 import { eq } from "drizzle-orm";
-import { SignJWT } from "jose";
+import { jwtVerify, SignJWT } from "jose";
 import { env } from "../../config/env.js";
 import { db } from "../../db/index.js";
 import { users } from "../../db/schema.js";
 import { LoginInput, RegisterUserInput } from "./auth.schema.js";
 import { EmailAlreadyInUseError } from "./errors/EmailAlreadyInUseError.js";
 import { InvalidCredentialsError } from "./errors/InvalidCredentialsError.js";
+import { InvalidTokenError } from "./errors/InvalidTokenError.js";
 
 type Tokens = {
   accessToken: string;
@@ -104,4 +105,23 @@ export async function login(input: LoginInput): Promise<Tokens> {
   }
 
   return generateTokens(user);
+}
+
+export async function validateAccessToken(
+  token: string | undefined,
+): Promise<{ id: number; email: string }> {
+  if (!token?.startsWith("Bearer ")) {
+    throw new InvalidTokenError();
+  }
+
+  try {
+    const result = await jwtVerify(token.slice(7), accessTokenSecret);
+
+    return {
+      id: Number(result.payload.sub),
+      email: String(result.payload.email),
+    };
+  } catch (error) {
+    throw new InvalidTokenError();
+  }
 }

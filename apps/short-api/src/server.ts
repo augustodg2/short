@@ -7,10 +7,12 @@ import { env } from "./config/env.js";
 import { linksRoutes } from "./modules/links/links.routes.js";
 import { authRoutes } from "./modules/auth/auth.routes.js";
 import { ValidationError } from "./utils/validate.js";
+import { authenticatePlugin } from "./modules/auth/plugins/authenticate.plugin.js";
 
 export const app = Fastify({ logger: true, trustProxy: true });
 
 app.register(sensible);
+app.register(authenticatePlugin);
 
 app.setErrorHandler((error, request, reply) => {
   if (error instanceof ValidationError) {
