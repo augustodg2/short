@@ -42,7 +42,8 @@ export async function generateTokens(user: {
   email: string;
 }): Promise<Tokens> {
   const accessToken = await new SignJWT({
-    id: user.id,
+    type: "access",
+    sub: String(user.id),
     email: user.email,
   })
     .setProtectedHeader({
@@ -53,7 +54,8 @@ export async function generateTokens(user: {
     .sign(accessTokenSecret);
 
   const refreshToken = await new SignJWT({
-    id: user.id,
+    type: "refresh",
+    sub: String(user.id),
   })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
