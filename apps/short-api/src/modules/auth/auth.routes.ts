@@ -1,10 +1,15 @@
 import { FastifyInstance } from "fastify";
-import { registerUserInputSchema, loginInputSchema } from "./auth.schema.js";
+import {
+  loginInputSchema,
+  refreshSessionInputSchema,
+  registerUserInputSchema,
+} from "./auth.schema.js";
 
-import { login, registerUser } from "./auth.service.js";
-import { InvalidCredentialsError } from "./errors/InvalidCredentialsError.js";
-import { EmailAlreadyInUseError } from "./errors/EmailAlreadyInUseError.js";
 import { validate } from "../../utils/validate.js";
+import { login, refreshSession, registerUser } from "./auth.service.js";
+import { EmailAlreadyInUseError } from "./errors/EmailAlreadyInUseError.js";
+import { InvalidCredentialsError } from "./errors/InvalidCredentialsError.js";
+import { InvalidRefreshTokenError } from "./errors/InvalidRefreshTokenError.js";
 
 export async function authRoutes(app: FastifyInstance) {
   app.post(
@@ -54,4 +59,21 @@ export async function authRoutes(app: FastifyInstance) {
       }
     },
   );
+
+  app.post("/auth/refresh", async (request, reply) => {
+    try {
+      const { refreshToken } = validate(
+        request.body,
+        refreshSessionInputSchema,
+      );
+
+      return refreshSession(refreshToken, request.user!);
+    } catch (error) {
+      if (error instanceof InvalidRefreshTokenError) {
+        return reply.unauthorized(error.message);
+      }
+
+      throw error;
+    }
+  });
 }

@@ -30,3 +30,13 @@ export const loginInputSchema = z.object({
 });
 
 export type LoginInput = z.infer<typeof loginInputSchema>;
+
+const REFRESH_TOKEN_REQUIRED_MESSAGE = "Refresh token is required";
+
+export const refreshSessionInputSchema = z.object({
+  refreshToken: z
+    .string(REFRESH_TOKEN_REQUIRED_MESSAGE)
+    .min(1, REFRESH_TOKEN_REQUIRED_MESSAGE),
+});
+
+export type RefreshSessionInput = z.infer<typeof refreshSessionInputSchema>;

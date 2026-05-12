@@ -1,14 +1,16 @@
 import argon2 from "argon2";
 import { eq } from "drizzle-orm";
 import { jwtVerify, SignJWT } from "jose";
+import { createHash } from "node:crypto";
 import { env } from "../../config/env.js";
 import { db } from "../../db/index.js";
 import { refreshTokens, users } from "../../db/schema.js";
 import { LoginInput, RegisterUserInput } from "./auth.schema.js";
 import { EmailAlreadyInUseError } from "./errors/EmailAlreadyInUseError.js";
+import { InvalidAccessTokenError } from "./errors/InvalidAccessTokenError.js";
 import { InvalidCredentialsError } from "./errors/InvalidCredentialsError.js";
-import { InvalidTokenError } from "./errors/InvalidTokenError.js";
-import { createHash } from "node:crypto";
+import { InvalidRefreshTokenError } from "./errors/InvalidRefreshTokenError.js";
+import { RevokedRefreshTokenError } from "./errors/RevokedRefreshTokenError.js";
 
 type Tokens = {
   accessToken: string;
@@ -70,7 +72,7 @@ export async function generateTokens(user: {
     .setExpirationTime(refreshTokenExpiration)
     .sign(refreshTokenSecret);
 
-  await persistAccessToken(accessToken, user.id, refreshTokenExpiration);
+  await persistRefreshToken(refreshToken, user.id, refreshTokenExpiration);
 
   return {
     accessToken,
@@ -78,11 +80,11 @@ export async function generateTokens(user: {
   };
 }
 
-function hashAccessToken(token: string): string {
+function hashRefreshToken(token: string): string {
   return createHash("sha256").update(token).digest("hex");
 }
 
-async function persistAccessToken(
+async function persistRefreshToken(
   token: string,
   userId: number,
   expiresAt: Date,
@@ -90,8 +92,43 @@ async function persistAccessToken(
   await db.insert(refreshTokens).values({
     userId,
     expiresAt,
-    tokenHash: hashAccessToken(token),
+    tokenHash: hashRefreshToken(token),
   });
+}
+
+export async function refreshSession(
+  refreshToken: string,
+  user: {
+    id: number;
+    email: string;
+  },
+) {
+  try {
+    await validateRefreshToken(refreshToken);
+  } catch (error) {
+    if (error instanceof RevokedRefreshTokenError) {
+      deleteAllRefreshTokens(user.id);
+    }
+
+    throw error;
+  }
+
+  await revokeRefreshToken(refreshToken);
+
+  return generateTokens(user);
+}
+
+async function revokeRefreshToken(token: string) {
+  await db
+    .update(refreshTokens)
+    .set({
+      revokedAt: new Date(),
+    })
+    .where(eq(refreshTokens.tokenHash, hashRefreshToken(token)));
+}
+
+async function deleteAllRefreshTokens(userId: number) {
+  await db.delete(refreshTokens).where(eq(refreshTokens.userId, userId));
 }
 
 export async function getUserByEmail(email: string) {
@@ -132,7 +169,7 @@ export async function validateAccessToken(
   token: string | undefined,
 ): Promise<{ id: number; email: string }> {
   if (!token?.startsWith("Bearer ")) {
-    throw new InvalidTokenError();
+    throw new InvalidAccessTokenError();
   }
 
   try {
@@ -143,6 +180,34 @@ export async function validateAccessToken(
       email: String(result.payload.email),
     };
   } catch (error) {
-    throw new InvalidTokenError();
+    throw new InvalidAccessTokenError();
   }
+}
+
+async function getRefreshTokenByHash(token: string) {
+  const tokenHash = hashRefreshToken(token);
+
+  return db.query.refreshTokens.findFirst({
+    where: eq(refreshTokens.tokenHash, tokenHash),
+  });
+}
+
+async function validateRefreshToken(token: string) {
+  try {
+    await jwtVerify(token, refreshTokenSecret);
+  } catch (error) {
+    throw new InvalidRefreshTokenError();
+  }
+
+  const refreshToken = await getRefreshTokenByHash(token);
+
+  if (!refreshToken) {
+    throw new InvalidRefreshTokenError();
+  }
+
+  if (refreshToken.revokedAt) {
+    throw new RevokedRefreshTokenError();
+  }
+
+  return refreshToken;
 }
