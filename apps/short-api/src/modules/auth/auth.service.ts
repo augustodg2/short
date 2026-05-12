@@ -10,7 +10,6 @@ import { EmailAlreadyInUseError } from "./errors/EmailAlreadyInUseError.js";
 import { InvalidAccessTokenError } from "./errors/InvalidAccessTokenError.js";
 import { InvalidCredentialsError } from "./errors/InvalidCredentialsError.js";
 import { InvalidRefreshTokenError } from "./errors/InvalidRefreshTokenError.js";
-import { RevokedRefreshTokenError } from "./errors/RevokedRefreshTokenError.js";
 
 type Tokens = {
   accessToken: string;
@@ -96,26 +95,17 @@ async function persistRefreshToken(
   });
 }
 
-export async function refreshSession(
-  refreshToken: string,
-  user: {
-    id: number;
-    email: string;
-  },
-) {
-  try {
-    await validateRefreshToken(refreshToken);
-  } catch (error) {
-    if (error instanceof RevokedRefreshTokenError) {
-      deleteAllRefreshTokens(user.id);
-    }
+export async function refreshSession(refreshToken: string) {
+  const tokenRecord = await validateRefreshToken(refreshToken);
 
-    throw error;
+  if (tokenRecord.revokedAt) {
+    await deleteAllRefreshTokens(tokenRecord.userId);
+    throw new InvalidRefreshTokenError();
   }
 
   await revokeRefreshToken(refreshToken);
 
-  return generateTokens(user);
+  return generateTokens(tokenRecord.user);
 }
 
 async function revokeRefreshToken(token: string) {
@@ -195,6 +185,7 @@ async function getRefreshTokenByHash(token: string) {
 
   return db.query.refreshTokens.findFirst({
     where: eq(refreshTokens.tokenHash, tokenHash),
+    with: { user: { columns: { id: true, email: true } } },
   });
 }
 
@@ -209,10 +200,6 @@ async function validateRefreshToken(token: string) {
 
   if (!refreshToken) {
     throw new InvalidRefreshTokenError();
-  }
-
-  if (refreshToken.revokedAt) {
-    throw new RevokedRefreshTokenError();
   }
 
   return refreshToken;

@@ -1,3 +1,4 @@
+import { relations } from "drizzle-orm";
 import { pgTable, text, timestamp, index, integer } from "drizzle-orm/pg-core";
 
 export const links = pgTable(
@@ -33,16 +34,12 @@ export const clicks = pgTable(
   ],
 );
 
-export const users = pgTable(
-  "users",
-  {
-    id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
-    email: text("email").notNull().unique(),
-    passwordHash: text("password_hash").notNull(),
-    createdAt: timestamp("created_at").notNull().defaultNow(),
-  },
-  (usersTable) => [index("users_email_idx").on(usersTable.email)],
-);
+export const users = pgTable("users", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  email: text("email").notNull().unique(),
+  passwordHash: text("password_hash").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
 
 export const refreshTokens = pgTable(
   "refresh_tokens",
@@ -61,3 +58,10 @@ export const refreshTokens = pgTable(
     index("refresh_tokens_user_id").on(accessTokensTable.userId),
   ],
 );
+
+export const refreshTokensRelations = relations(refreshTokens, ({ one }) => ({
+  user: one(users, {
+    fields: [refreshTokens.userId],
+    references: [users.id],
+  }),
+}));

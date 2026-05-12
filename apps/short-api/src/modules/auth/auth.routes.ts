@@ -66,28 +66,44 @@ export async function authRoutes(app: FastifyInstance) {
     },
   );
 
-  app.post("/auth/refresh", async (request, reply) => {
-    try {
-      const { refreshToken } = validate(
-        request.body,
-        refreshSessionInputSchema,
-      );
+  app.post(
+    "/auth/refresh",
+    {
+      config: {
+        public: true,
+      },
+    },
+    async (request, reply) => {
+      try {
+        const { refreshToken } = validate(
+          request.body,
+          refreshSessionInputSchema,
+        );
 
-      const tokens = await refreshSession(refreshToken, request.user!);
+        const tokens = await refreshSession(refreshToken);
 
-      return tokens;
-    } catch (error) {
-      if (error instanceof InvalidRefreshTokenError) {
-        return reply.unauthorized(error.message);
+        return tokens;
+      } catch (error) {
+        if (error instanceof InvalidRefreshTokenError) {
+          return reply.unauthorized(error.message);
+        }
+
+        throw error;
       }
+    },
+  );
 
-      throw error;
-    }
-  });
+  app.post(
+    "/auth/logout",
+    {
+      config: {
+        public: true,
+      },
+    },
+    async (request) => {
+      const { refreshToken } = validate(request.body, logoutInputSchema);
 
-  app.post("/auth/logout", async (request, reply) => {
-    const { refreshToken } = validate(request.body, logoutInputSchema);
-
-    await deleteRefreshToken(refreshToken);
-  });
+      await deleteRefreshToken(refreshToken);
+    },
+  );
 }
