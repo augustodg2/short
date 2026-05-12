@@ -43,3 +43,21 @@ export const users = pgTable(
   },
   (usersTable) => [index("users_email_idx").on(usersTable.email)],
 );
+
+export const refreshTokens = pgTable(
+  "refresh_tokens",
+  {
+    id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    tokenHash: text("token_hash").notNull(),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    expiresAt: timestamp("expires_at").notNull(),
+    revokedAt: timestamp("revoked_at"),
+  },
+  (accessTokensTable) => [
+    index("refresh_tokens_token_hash_idx").on(accessTokensTable.tokenHash),
+    index("refresh_tokens_user_id").on(accessTokensTable.userId),
+  ],
+);

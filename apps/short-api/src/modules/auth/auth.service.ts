@@ -3,11 +3,12 @@ import { eq } from "drizzle-orm";
 import { jwtVerify, SignJWT } from "jose";
 import { env } from "../../config/env.js";
 import { db } from "../../db/index.js";
-import { users } from "../../db/schema.js";
+import { refreshTokens, users } from "../../db/schema.js";
 import { LoginInput, RegisterUserInput } from "./auth.schema.js";
 import { EmailAlreadyInUseError } from "./errors/EmailAlreadyInUseError.js";
 import { InvalidCredentialsError } from "./errors/InvalidCredentialsError.js";
 import { InvalidTokenError } from "./errors/InvalidTokenError.js";
+import { createHash } from "node:crypto";
 
 type Tokens = {
   accessToken: string;
@@ -56,21 +57,41 @@ export async function generateTokens(user: {
     )
     .sign(accessTokenSecret);
 
+  const refreshTokenExpiration = new Date(
+    Date.now() + env.JWT_REFRESH_EXPIRY_SECONDS * 1000,
+  );
+
   const refreshToken = await new SignJWT({
     type: "refresh",
     sub: String(user.id),
   })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
-    .setExpirationTime(
-      new Date(Date.now() + env.JWT_REFRESH_EXPIRY_SECONDS * 1000),
-    )
+    .setExpirationTime(refreshTokenExpiration)
     .sign(refreshTokenSecret);
+
+  await persistAccessToken(accessToken, user.id, refreshTokenExpiration);
 
   return {
     accessToken,
     refreshToken,
   };
+}
+
+function hashAccessToken(token: string): string {
+  return createHash("sha256").update(token).digest("hex");
+}
+
+async function persistAccessToken(
+  token: string,
+  userId: number,
+  expiresAt: Date,
+) {
+  await db.insert(refreshTokens).values({
+    userId,
+    expiresAt,
+    tokenHash: hashAccessToken(token),
+  });
 }
 
 export async function getUserByEmail(email: string) {
