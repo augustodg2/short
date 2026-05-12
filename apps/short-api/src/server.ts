@@ -1,17 +1,25 @@
 import rateLimit from "@fastify/rate-limit";
+import fastifySchedule from "@fastify/schedule";
 import sensible from "@fastify/sensible";
 import Fastify from "fastify";
 import { Redis } from "ioredis";
 import { fileURLToPath } from "node:url";
 import { env } from "./config/env.js";
-import { linksRoutes } from "./modules/links/links.routes.js";
+import { deleteExpiredRefreshTokenJob } from "./jobs/DeleteExpiredRefreshTokenTask.js";
 import { authRoutes } from "./modules/auth/auth.routes.js";
-import { ValidationError } from "./utils/validate.js";
 import { authenticatePlugin } from "./modules/auth/plugins/authenticate.plugin.js";
+import { linksRoutes } from "./modules/links/links.routes.js";
+import { ValidationError } from "./utils/validate.js";
 
 export const app = Fastify({ logger: true, trustProxy: true });
 
 app.register(sensible);
+app.register(fastifySchedule);
+
+app.ready().then(() => {
+  app.scheduler.addSimpleIntervalJob(deleteExpiredRefreshTokenJob(app));
+});
+
 app.register(authenticatePlugin);
 
 app.setErrorHandler((error, request, reply) => {
