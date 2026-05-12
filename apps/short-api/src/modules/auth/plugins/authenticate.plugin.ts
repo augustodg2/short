@@ -11,7 +11,8 @@ export const authenticatePlugin: FastifyPluginAsync = fp(async (fastify) => {
       }
 
       try {
-        await validateAccessToken(request.headers.authorization);
+        const user = await validateAccessToken(request.headers.authorization);
+        request.user = user;
       } catch (error) {
         return reply.unauthorized();
       }
