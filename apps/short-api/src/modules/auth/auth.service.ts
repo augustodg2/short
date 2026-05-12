@@ -127,6 +127,12 @@ async function revokeRefreshToken(token: string) {
     .where(eq(refreshTokens.tokenHash, hashRefreshToken(token)));
 }
 
+export async function deleteRefreshToken(token: string) {
+  await db
+    .delete(refreshTokens)
+    .where(eq(refreshTokens.tokenHash, hashRefreshToken(token)));
+}
+
 async function deleteAllRefreshTokens(userId: number) {
   await db.delete(refreshTokens).where(eq(refreshTokens.userId, userId));
 }

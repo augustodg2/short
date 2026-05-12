@@ -40,3 +40,11 @@ export const refreshSessionInputSchema = z.object({
 });
 
 export type RefreshSessionInput = z.infer<typeof refreshSessionInputSchema>;
+
+export const logoutInputSchema = z.object({
+  refreshToken: z
+    .string(REFRESH_TOKEN_REQUIRED_MESSAGE)
+    .min(1, REFRESH_TOKEN_REQUIRED_MESSAGE),
+});
+
+export type LogoutInput = z.infer<typeof logoutInputSchema>;
