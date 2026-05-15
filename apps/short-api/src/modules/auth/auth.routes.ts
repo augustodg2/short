@@ -1,3 +1,4 @@
+import { ZodTypeProvider } from "@fastify/type-provider-zod";
 import { FastifyInstance } from "fastify";
 import {
   loginInputSchema,
@@ -5,8 +6,6 @@ import {
   refreshSessionInputSchema,
   registerUserInputSchema,
 } from "./auth.schema.js";
-
-import { validate } from "../../utils/validate.js";
 import {
   deleteRefreshToken,
   login,
@@ -18,18 +17,21 @@ import { InvalidCredentialsError } from "./errors/InvalidCredentialsError.js";
 import { InvalidRefreshTokenError } from "./errors/InvalidRefreshTokenError.js";
 
 export async function authRoutes(app: FastifyInstance) {
-  app.post(
+  const routes = app.withTypeProvider<ZodTypeProvider>();
+
+  routes.post(
     "/auth/register",
     {
       config: {
         public: true,
       },
+      schema: {
+        body: registerUserInputSchema,
+      },
     },
     async (request, reply) => {
       try {
-        const input = validate(request.body, registerUserInputSchema);
-
-        const tokens = await registerUser(input);
+        const tokens = await registerUser(request.body);
 
         return tokens;
       } catch (error) {
@@ -42,18 +44,19 @@ export async function authRoutes(app: FastifyInstance) {
     },
   );
 
-  app.post(
+  routes.post(
     "/auth/login",
     {
       config: {
         public: true,
       },
+      schema: {
+        body: loginInputSchema,
+      },
     },
     async (request, reply) => {
       try {
-        const input = validate(request.body, loginInputSchema);
-
-        const tokens = await login(input);
+        const tokens = await login(request.body);
 
         return tokens;
       } catch (error) {
@@ -66,21 +69,19 @@ export async function authRoutes(app: FastifyInstance) {
     },
   );
 
-  app.post(
+  routes.post(
     "/auth/refresh",
     {
       config: {
         public: true,
       },
+      schema: {
+        body: refreshSessionInputSchema,
+      },
     },
     async (request, reply) => {
       try {
-        const { refreshToken } = validate(
-          request.body,
-          refreshSessionInputSchema,
-        );
-
-        const tokens = await refreshSession(refreshToken);
+        const tokens = await refreshSession(request.body.refreshToken);
 
         return tokens;
       } catch (error) {
@@ -93,17 +94,18 @@ export async function authRoutes(app: FastifyInstance) {
     },
   );
 
-  app.post(
+  routes.post(
     "/auth/logout",
     {
       config: {
         public: true,
       },
+      schema: {
+        body: logoutInputSchema,
+      },
     },
     async (request) => {
-      const { refreshToken } = validate(request.body, logoutInputSchema);
-
-      await deleteRefreshToken(refreshToken);
+      await deleteRefreshToken(request.body.refreshToken);
     },
   );
 }

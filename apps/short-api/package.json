@@ -20,6 +20,7 @@
     "@fastify/rate-limit": "^10.3.0",
     "@fastify/schedule": "^6.0.0",
     "@fastify/sensible": "^6.0.4",
+    "@fastify/type-provider-zod": "^1.0.0",
     "argon2": "^0.44.0",
     "dotenv": "^17.4.2",
     "drizzle-orm": "^0.45.2",

@@ -1,7 +1,8 @@
+import { ZodTypeProvider } from "@fastify/type-provider-zod";
 import { FastifyInstance } from "fastify";
+import z from "zod";
 import { env } from "../../config/env.js";
 import { getSingleHeader } from "../../utils/getSingleHeader.js";
-import { validate } from "../../utils/validate.js";
 import { ExpiredLinkError } from "./errors/ExpiredLinkError.js";
 import { createLinkSchema } from "./links.schema.js";
 import {
@@ -13,7 +14,9 @@ import {
 } from "./links.service.js";
 
 export async function linksRoutes(app: FastifyInstance) {
-  app.post(
+  const routes = app.withTypeProvider<ZodTypeProvider>();
+
+  routes.post(
     "/links",
     {
       config: {
@@ -22,18 +25,26 @@ export async function linksRoutes(app: FastifyInstance) {
           timeWindow: env.CREATE_LINK_RATE_LIMIT_TIME_WINDOW_MS,
         },
       },
+      schema: {
+        body: createLinkSchema,
+      },
     },
     async (request, reply) => {
-      const input = validate(request.body, createLinkSchema);
-
-      const link = await createLink(input);
+      const link = await createLink(request.body);
 
       return reply.code(201).send(link);
     },
   );
 
-  app.get<{ Params: { slug: string } }>(
+  routes.get(
     "/links/:slug/resolve",
+    {
+      schema: {
+        params: z.object({
+          slug: z.string(),
+        }),
+      },
+    },
     async (request, reply) => {
       const { slug } = request.params;
 
@@ -70,16 +81,13 @@ export async function linksRoutes(app: FastifyInstance) {
     },
   );
 
-  app.get<{ Params: { id: number } }>(
+  routes.get(
     "/links/:id/analytics",
     {
       schema: {
-        params: {
-          type: "object",
-          properties: {
-            id: { type: "integer" },
-          },
-        },
+        params: z.object({
+          id: z.coerce.number().int().positive(),
+        }),
       },
     },
     async (request, reply) => {

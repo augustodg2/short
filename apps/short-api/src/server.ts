@@ -1,6 +1,11 @@
 import rateLimit from "@fastify/rate-limit";
 import fastifySchedule from "@fastify/schedule";
 import sensible from "@fastify/sensible";
+import {
+  serializerCompiler,
+  validatorCompiler,
+  ZodTypeProvider,
+} from "@fastify/type-provider-zod";
 import Fastify from "fastify";
 import { Redis } from "ioredis";
 import { fileURLToPath } from "node:url";
@@ -9,9 +14,14 @@ import { deleteExpiredRefreshTokenJob } from "./jobs/DeleteExpiredRefreshTokenTa
 import { authRoutes } from "./modules/auth/auth.routes.js";
 import { authenticatePlugin } from "./modules/auth/plugins/authenticate.plugin.js";
 import { linksRoutes } from "./modules/links/links.routes.js";
-import { ValidationError } from "./utils/validate.js";
 
-export const app = Fastify({ logger: true, trustProxy: true });
+export const app = Fastify({
+  logger: true,
+  trustProxy: true,
+}).withTypeProvider<ZodTypeProvider>();
+
+app.setValidatorCompiler(validatorCompiler);
+app.setSerializerCompiler(serializerCompiler);
 
 app.register(sensible);
 app.register(fastifySchedule);
@@ -21,14 +31,6 @@ app.ready().then(() => {
 });
 
 app.register(authenticatePlugin);
-
-app.setErrorHandler((error, request, reply) => {
-  if (error instanceof ValidationError) {
-    return reply.badRequest(error.message);
-  }
-
-  throw error;
-});
 
 if (process.env.NODE_ENV != "test") {
   app.register(rateLimit, {
