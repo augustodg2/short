@@ -4,7 +4,13 @@ import { getSingleHeader } from "../../utils/getSingleHeader.js";
 import { validate } from "../../utils/validate.js";
 import { ExpiredLinkError } from "./errors/ExpiredLinkError.js";
 import { createLinkSchema } from "./links.schema.js";
-import { createLink, resolveLink, trackClick } from "./links.service.js";
+import {
+  createLink,
+  getLinkAnalytics,
+  getLinkById,
+  resolveLink,
+  trackClick,
+} from "./links.service.js";
 
 export async function linksRoutes(app: FastifyInstance) {
   app.post(
@@ -61,6 +67,33 @@ export async function linksRoutes(app: FastifyInstance) {
 
         throw error;
       }
+    },
+  );
+
+  app.get<{ Params: { id: number } }>(
+    "/links/:id/analytics",
+    {
+      schema: {
+        params: {
+          type: "object",
+          properties: {
+            id: { type: "integer" },
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      const { id: linkId } = request.params;
+
+      const link = await getLinkById(linkId);
+
+      if (!link || link.userId !== request.user!.id) {
+        return reply.notFound("Link not found");
+      }
+
+      const analytics = await getLinkAnalytics(linkId);
+
+      return reply.send(analytics);
     },
   );
 }

@@ -1,5 +1,5 @@
 import { customAlphabet } from "nanoid";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { CreateLinkInput } from "./links.schema.js";
 import { db } from "../../db/index.js";
 import { clicks, links } from "../../db/schema.js";
@@ -29,7 +29,7 @@ export async function createLink(input: CreateLinkInput) {
   return link;
 }
 
-async function getLink(
+async function getLinkBySlug(
   slug: string,
   options: { useCache?: boolean } = { useCache: true },
 ): Promise<{
@@ -72,7 +72,7 @@ export async function resolveLink(
 ): Promise<{ id: number; url: string } | null> {
   const cacheKey = `short:slug:${slug}`;
 
-  const link = await getLink(slug, options);
+  const link = await getLinkBySlug(slug, options);
 
   if (!link) {
     return null;
@@ -114,4 +114,70 @@ export async function trackClick({
     referrer,
     device,
   });
+}
+
+export async function getLinkById(linkId: number) {
+  return db.query.links.findFirst({ where: eq(links.id, linkId) });
+}
+
+type AggregateMetric = {
+  value: string;
+  count: number;
+};
+
+type LinkAnalytics = {
+  totalClicks: number;
+  clicksByCountry: AggregateMetric[];
+  clicksByReferer: AggregateMetric[];
+  clicksByDevice: AggregateMetric[];
+};
+
+export async function getLinkAnalytics(linkId: number): Promise<LinkAnalytics> {
+  // GROUPING SETS computes 4 aggregations in a single query, avoiding multiple DB round-trips
+  const result: {
+    type: "total" | "country" | "device" | "referrer";
+    category: string | null;
+    count: number;
+  }[] = await db.execute(sql`
+    WITH filtered AS (
+        SELECT id, country, device, referrer
+        FROM ${clicks}
+        WHERE ${clicks.linkId} = ${linkId}
+    )
+    SELECT
+        CASE
+            WHEN GROUPING(country) = 1 AND GROUPING(device) = 1 AND GROUPING(referrer) = 1 THEN 'total'
+            WHEN GROUPING(device) = 1 AND GROUPING(referrer) = 1 THEN 'country'
+            WHEN GROUPING(referrer) = 1 THEN 'device'
+            ELSE 'referrer'
+        END AS type,
+        COALESCE(country, device, referrer) AS category,
+        CAST(COUNT(id) AS INTEGER) AS count
+    FROM filtered
+    GROUP BY
+        GROUPING SETS (
+            (),
+            (country),
+            (device),
+            (referrer)
+        )
+  `);
+
+  const aggregate = (type: "country" | "referrer" | "device") =>
+    result
+      .filter((metric) => metric.type === type)
+      .map((metric) => ({
+        value: metric.category ?? "unknown",
+        count: metric.count,
+      }))
+      .sort((a, b) => b.count - a.count);
+
+  const response = {
+    totalClicks: result.find((metric) => metric.type === "total")?.count ?? 0,
+    clicksByCountry: aggregate("country"),
+    clicksByReferer: aggregate("referrer"),
+    clicksByDevice: aggregate("device"),
+  };
+
+  return response;
 }
