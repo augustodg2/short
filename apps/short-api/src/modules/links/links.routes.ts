@@ -2,7 +2,7 @@ import { ZodTypeProvider } from "@fastify/type-provider-zod";
 import { FastifyInstance } from "fastify";
 import z from "zod";
 import { env } from "../../config/env.js";
-import { getSingleHeader } from "../../utils/getSingleHeader.js";
+import { getSingleHeader } from "../../lib/utils/getSingleHeader.js";
 import { ExpiredLinkError } from "./errors/ExpiredLinkError.js";
 import { createLinkSchema } from "./links.schema.js";
 import {
@@ -61,13 +61,18 @@ export async function linksRoutes(app: FastifyInstance) {
           getSingleHeader(request.headers, "cf-ipcountry") ??
           getSingleHeader(request.headers, "x-country");
 
-        trackClick({
+        const trackLinkPayload = {
           linkId: link.id,
           userAgent,
           country,
           referrer,
-        }).catch((error) => {
-          app.log.warn("Error trying to track click to link:", error);
+        };
+
+        trackClick(trackLinkPayload).catch((err) => {
+          request.log.error(
+            { err, payload: trackLinkPayload },
+            "Error trying to track click to link.",
+          );
         });
 
         return { url: link.url };
@@ -95,7 +100,16 @@ export async function linksRoutes(app: FastifyInstance) {
 
       const link = await getLinkById(linkId);
 
-      if (!link || link.userId !== request.user!.id) {
+      if (!link) {
+        return reply.notFound("Link not found");
+      }
+
+      if (link.userId !== request.user!.id) {
+        request.log.warn(
+          { requesterUserId: request.user?.id, link },
+          "Trying to fetch analytics for a link that belongs to another user.",
+        );
+
         return reply.notFound("Link not found");
       }
 

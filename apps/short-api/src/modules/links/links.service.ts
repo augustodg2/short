@@ -7,6 +7,7 @@ import { redis } from "../../cache/index.js";
 import { env } from "../../config/env.js";
 import { ExpiredLinkError } from "./errors/ExpiredLinkError.js";
 import { UAParser } from "ua-parser-js";
+import { logger } from "../../lib/logger.js";
 
 const generateSlug = customAlphabet(
   // Excludes: 0, O, o, l, 1, I (ambiguous characters)
@@ -44,7 +45,7 @@ async function getLinkBySlug(
       const cached = await redis.get(cacheKey);
 
       if (cached) {
-        console.debug({ slug, cache: "hit" });
+        logger.debug({ slug }, "cache hit");
 
         const parsed = JSON.parse(cached);
 
@@ -54,12 +55,12 @@ async function getLinkBySlug(
           expiresAt: parsed.expiresAt ? new Date(parsed.expiresAt) : null,
         };
       }
-    } catch (error) {
-      console.warn("Redis error, falling back to DB.", error);
+    } catch (err) {
+      logger.warn({ err }, "Redis error, falling back to DB.");
     }
   }
 
-  console.debug({ slug, cache: "miss" });
+  logger.debug({ slug }, "cache miss");
 
   const [link] = await db.select().from(links).where(eq(links.slug, slug));
 

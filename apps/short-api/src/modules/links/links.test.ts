@@ -1,5 +1,5 @@
 import { describe, expect, test, vi } from "vitest";
-import { app } from "../../server.js";
+import { app } from "../../app.js";
 
 describe("POST /links", () => {
   test("should create link and return slug", async () => {
