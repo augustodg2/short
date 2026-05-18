@@ -2,16 +2,11 @@ import { ZodTypeProvider } from "@fastify/type-provider-zod";
 import { FastifyInstance } from "fastify";
 import z from "zod";
 import { env } from "../../config/env.js";
-import { getSingleHeader } from "../../lib/utils/getSingleHeader.js";
+import { getLinkAnalytics, trackClick } from "./analytics/analytics.service.js";
+import { extractTrackLinkPayload } from "./analytics/helpers/extract-track-link-payload.js";
 import { ExpiredLinkError } from "./errors/ExpiredLinkError.js";
 import { createLinkSchema } from "./links.schema.js";
-import {
-  createLink,
-  getLinkAnalytics,
-  getLinkById,
-  resolveLink,
-  trackClick,
-} from "./links.service.js";
+import { createLink, getLinkById, resolveLink } from "./links.service.js";
 
 export async function linksRoutes(app: FastifyInstance) {
   const routes = app.withTypeProvider<ZodTypeProvider>();
@@ -58,18 +53,7 @@ export async function linksRoutes(app: FastifyInstance) {
           return reply.notFound("Link not found");
         }
 
-        const userAgent = getSingleHeader(request.headers, "user-agent");
-        const referrer = getSingleHeader(request.headers, "referer");
-        const country =
-          getSingleHeader(request.headers, "cf-ipcountry") ??
-          getSingleHeader(request.headers, "x-country");
-
-        const trackLinkPayload = {
-          linkId: link.id,
-          userAgent,
-          country,
-          referrer,
-        };
+        const trackLinkPayload = extractTrackLinkPayload(request, link.id);
 
         trackClick(trackLinkPayload).catch((err) => {
           request.log.error(
