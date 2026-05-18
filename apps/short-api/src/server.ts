@@ -1,4 +1,6 @@
-import { app } from "./app.js";
+import { buildApp } from "./app.js";
 import { env } from "./config/env.js";
+
+const app = buildApp();
 
 await app.listen({ port: env.PORT, host: env.HOST });

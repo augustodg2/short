@@ -1,12 +1,28 @@
-import { describe, expect, test, vi } from "vitest";
-import { app } from "../../app.js";
+import { beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
+import { FastifyInstance } from "fastify";
+import { setupTestEnvironment } from "../../tests/helpers/setupTestEnvironment.js";
+import { registerUser } from "../../tests/helpers/auth.js";
 
 describe("POST /links", () => {
+  const { getApp } = setupTestEnvironment();
+
+  let app: FastifyInstance;
+  let accessToken: string;
+
+  beforeAll(() => {
+    app = getApp();
+  });
+
+  beforeEach(async () => {
+    accessToken = await registerUser(app);
+  });
+
   test("should create link and return slug", async () => {
     const response = await app.inject({
       method: "POST",
       url: "/links",
       body: { url: "https://example.com" },
+      headers: { authorization: `Bearer ${accessToken}` },
     });
 
     expect(response.statusCode).toBe(201);
@@ -19,6 +35,7 @@ describe("POST /links", () => {
       method: "POST",
       url: "/links",
       body: { url: "invalid url" },
+      headers: { authorization: `Bearer ${accessToken}` },
     });
 
     expect(response.statusCode).toBe(400);
@@ -37,6 +54,7 @@ describe("POST /links", () => {
       method: "POST",
       url: "/links",
       body: { url: "https://example.com", expiresAt: yesterday.toISOString() },
+      headers: { authorization: `Bearer ${accessToken}` },
     });
 
     expect(response.statusCode).toBe(400);
@@ -49,11 +67,25 @@ describe("POST /links", () => {
 });
 
 describe("GET /links/:slug/resolve", () => {
+  const { getApp } = setupTestEnvironment();
+
+  let app: FastifyInstance;
+  let accessToken: string;
+
+  beforeAll(() => {
+    app = getApp();
+  });
+
+  beforeEach(async () => {
+    accessToken = await registerUser(app);
+  });
+
   test("should return resolved url", async () => {
     const createLinkResponse = await app.inject({
       method: "POST",
       url: "/links",
       body: { url: "https://example.com" },
+      headers: { authorization: `Bearer ${accessToken}` },
     });
 
     const { slug } = createLinkResponse.json();
@@ -89,6 +121,7 @@ describe("GET /links/:slug/resolve", () => {
       method: "POST",
       url: "/links",
       body: { url: "https://example.com", expiresAt: today.toISOString() },
+      headers: { authorization: `Bearer ${accessToken}` },
     });
 
     vi.setSystemTime(today);

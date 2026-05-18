@@ -6,7 +6,7 @@ import {
   validatorCompiler,
   ZodTypeProvider,
 } from "@fastify/type-provider-zod";
-import Fastify from "fastify";
+import Fastify, { FastifyBaseLogger } from "fastify";
 import { Redis } from "ioredis";
 import { env } from "./config/env.js";
 import { deleteExpiredLinksJob } from "./jobs/DeleteExpiredLinksJob.js";
@@ -16,37 +16,44 @@ import { authRoutes } from "./modules/auth/auth.routes.js";
 import { authenticatePlugin } from "./modules/auth/plugins/authenticate.plugin.js";
 import { linksRoutes } from "./modules/links/links.routes.js";
 
-export const app = Fastify({
-  loggerInstance: logger,
-  trustProxy: true,
-}).withTypeProvider<ZodTypeProvider>();
-
-app.setValidatorCompiler(validatorCompiler);
-app.setSerializerCompiler(serializerCompiler);
-
-app.register(sensible);
-app.register(fastifySchedule);
-
-app.ready().then(() => {
-  app.scheduler.addSimpleIntervalJob(deleteExpiredRefreshTokensJob());
-  app.scheduler.addSimpleIntervalJob(deleteExpiredLinksJob());
-});
-
-app.register(authenticatePlugin);
-
-if (process.env.NODE_ENV != "test") {
-  app.register(rateLimit, {
-    redis: new Redis(env.REDIS_URL, {
-      maxRetriesPerRequest: 1,
-      connectTimeout: 500,
-    }),
-    skipOnError: true,
-    max: env.GLOBAL_RATE_LIMIT_MAX,
-    timeWindow: env.GLOBAL_RATE_LIMIT_TIME_WINDOW_MS,
+export function buildApp() {
+  const app = Fastify({
+    loggerInstance: logger as FastifyBaseLogger,
+    trustProxy: true,
   });
+
+  app.setValidatorCompiler(validatorCompiler);
+  app.setSerializerCompiler(serializerCompiler);
+  app.setSchemaErrorFormatter((errors) => {
+    return new Error(errors[0].message);
+  });
+
+  app.register(sensible);
+  app.register(fastifySchedule);
+
+  app.register(authenticatePlugin);
+
+  app.register(authRoutes);
+  app.register(linksRoutes);
+
+  app.get("/health", async () => ({ status: "ok" }));
+
+  if (process.env.NODE_ENV != "test") {
+    app.register(rateLimit, {
+      redis: new Redis(env.REDIS_URL, {
+        maxRetriesPerRequest: 1,
+        connectTimeout: 500,
+      }),
+      skipOnError: true,
+      max: env.GLOBAL_RATE_LIMIT_MAX,
+      timeWindow: env.GLOBAL_RATE_LIMIT_TIME_WINDOW_MS,
+    });
+
+    app.ready().then(() => {
+      app.scheduler.addSimpleIntervalJob(deleteExpiredRefreshTokensJob());
+      app.scheduler.addSimpleIntervalJob(deleteExpiredLinksJob());
+    });
+  }
+
+  return app;
 }
-
-app.register(authRoutes);
-app.register(linksRoutes);
-
-app.get("/health", async () => ({ status: "ok" }));

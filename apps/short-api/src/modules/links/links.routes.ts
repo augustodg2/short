@@ -44,6 +44,9 @@ export async function linksRoutes(app: FastifyInstance) {
           slug: z.string(),
         }),
       },
+      config: {
+        public: true,
+      },
     },
     async (request, reply) => {
       const { slug } = request.params;
