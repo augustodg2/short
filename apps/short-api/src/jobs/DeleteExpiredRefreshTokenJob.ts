@@ -2,23 +2,23 @@ import { lt } from "drizzle-orm";
 import { AsyncTask, SimpleIntervalJob } from "toad-scheduler";
 import { db } from "../db/index.js";
 import { refreshTokens } from "../db/schema.js";
-import { FastifyInstance } from "fastify";
+import { logger } from "../lib/logger.js";
 
-export const deleteExpiredRefreshTokenJob = (app: FastifyInstance) => {
-  const deleteExpiredRefreshTokenTask = new AsyncTask(
-    "Delete expired refresh token",
+export const deleteExpiredRefreshTokensJob = () => {
+  const deleteExpiredRefreshTokensTask = new AsyncTask(
+    "delete-expired-refresh-tokens",
     async () => {
       try {
-        app.log.info("CRON: Will delete expired refresh tokens.");
+        logger.info("CRON: Will delete expired refresh tokens.");
 
         const result = await db
           .delete(refreshTokens)
           .where(lt(refreshTokens.expiresAt, new Date()))
-          .returning();
+          .returning({ id: refreshTokens.id });
 
-        app.log.info(`CRON: Deleted ${result.length} rows.`);
+        logger.info(`CRON: Deleted ${result.length} expired refresh tokens.`);
       } catch (error) {
-        app.log.error(
+        logger.error(
           `CRON: Error trying to delete expired refresh tokens: ${error instanceof Error ? error.message : String(error)}`,
         );
       }
@@ -27,6 +27,6 @@ export const deleteExpiredRefreshTokenJob = (app: FastifyInstance) => {
 
   return new SimpleIntervalJob(
     { hours: 24, runImmediately: true },
-    deleteExpiredRefreshTokenTask,
+    deleteExpiredRefreshTokensTask,
   );
 };

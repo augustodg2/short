@@ -9,7 +9,8 @@ import {
 import Fastify from "fastify";
 import { Redis } from "ioredis";
 import { env } from "./config/env.js";
-import { deleteExpiredRefreshTokenJob } from "./jobs/DeleteExpiredRefreshTokenTask.js";
+import { deleteExpiredLinksJob } from "./jobs/DeleteExpiredLinksJob.js";
+import { deleteExpiredRefreshTokensJob } from "./jobs/DeleteExpiredRefreshTokenJob.js";
 import { logger } from "./lib/logger.js";
 import { authRoutes } from "./modules/auth/auth.routes.js";
 import { authenticatePlugin } from "./modules/auth/plugins/authenticate.plugin.js";
@@ -27,7 +28,8 @@ app.register(sensible);
 app.register(fastifySchedule);
 
 app.ready().then(() => {
-  app.scheduler.addSimpleIntervalJob(deleteExpiredRefreshTokenJob(app));
+  app.scheduler.addSimpleIntervalJob(deleteExpiredRefreshTokensJob());
+  app.scheduler.addSimpleIntervalJob(deleteExpiredLinksJob());
 });
 
 app.register(authenticatePlugin);
