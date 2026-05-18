@@ -14,3 +14,12 @@ export const createLinkSchema = z.object({
 });
 
 export type CreateLinkInput = z.infer<typeof createLinkSchema>;
+
+export const linkSchema = z.object({
+  id: z.number(),
+  userId: z.number().nullable(),
+  slug: z.string(),
+  url: z.string(),
+  createdAt: z.coerce.date(),
+  expiresAt: z.coerce.date().nullable(),
+});

@@ -93,7 +93,7 @@ export async function linksRoutes(app: FastifyInstance) {
 
       if (link.userId !== request.user!.id) {
         request.log.warn(
-          { requesterUserId: request.user?.id, link },
+          { requesterUserId: request.user!.id, link },
           "Trying to fetch analytics for a link that belongs to another user.",
         );
 

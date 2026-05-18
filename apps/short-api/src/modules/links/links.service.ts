@@ -1,8 +1,11 @@
 import { customAlphabet } from "nanoid";
+import { Link } from "../../db/entities.js";
+import { logger } from "../../lib/logger.js";
 import { ExpiredLinkError } from "./errors/ExpiredLinkError.js";
-import { CreateLinkInput } from "./links.schema.js";
-
 import * as linkRepository from "./links.repository.js";
+import { CreateLinkInput } from "./links.schema.js";
+import { ZodError } from "zod";
+import { MalformedCachedLinkError } from "./errors/MalformedCachedLinkError.js";
 
 const generateSlug = customAlphabet(
   // Excludes: 0, O, o, l, 1, I (ambiguous characters)
@@ -11,20 +14,45 @@ const generateSlug = customAlphabet(
 );
 
 export async function createLink({ url, expiresAt }: CreateLinkInput) {
-  const slug = generateSlug();
-
   return linkRepository.create({
-    slug,
+    slug: generateSlug(),
     url,
     expiresAt,
   });
+}
+
+async function getBySlug(
+  slug: string,
+  options: { useCache?: boolean } = { useCache: true },
+): Promise<Link | null> {
+  if (options?.useCache) {
+    try {
+      const cached = await linkRepository.getBySlugFromCache(slug);
+
+      if (cached) {
+        logger.debug({ slug }, "cache hit");
+
+        return cached;
+      }
+    } catch (err) {
+      if (err instanceof MalformedCachedLinkError) {
+        await linkRepository.deleteFromCache(slug);
+      }
+
+      logger.warn({ err }, "Redis error, falling back to DB.");
+    }
+  }
+
+  logger.debug({ slug }, "cache miss");
+
+  return linkRepository.getBySlugFromDb(slug);
 }
 
 export async function resolveLink(
   slug: string,
   options: { useCache?: boolean } = { useCache: true },
 ): Promise<{ id: number; url: string } | null> {
-  const link = await linkRepository.getBySlug(slug, options);
+  const link = await getBySlug(slug, options);
 
   if (!link) {
     return null;

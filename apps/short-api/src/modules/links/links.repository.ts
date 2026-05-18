@@ -1,90 +1,61 @@
 import { eq } from "drizzle-orm";
 import { redis } from "../../cache/index.js";
+import { env } from "../../config/env.js";
+import { Link } from "../../db/entities.js";
 import { db } from "../../db/index.js";
 import { links } from "../../db/schema.js";
-import { logger } from "../../lib/logger.js";
-import { env } from "../../config/env.js";
+import { linkSchema } from "./links.schema.js";
+import { MalformedCachedLinkError } from "./errors/MalformedCachedLinkError.js";
 
-export async function create({
-  slug,
-  url,
-  expiresAt,
-}: {
-  slug: string;
-  url: string;
-  expiresAt: Date | null;
-}) {
-  const [link] = await db
-    .insert(links)
-    .values({
-      slug,
-      url,
-      expiresAt,
-    })
-    .returning();
+export async function create(
+  linkValues: Pick<Link, "slug" | "url" | "expiresAt">,
+): Promise<Link> {
+  const [link] = await db.insert(links).values(linkValues).returning();
 
   return link;
 }
 
-function getCacheKey(slug: string) {
+function getCacheKey(slug: string): string {
   return `short:slug:${slug}`;
 }
 
-async function getFromCache(slug: string) {
+export async function getBySlugFromCache(slug: string): Promise<Link | null> {
   const cached = await redis.get(getCacheKey(slug));
 
   if (!cached) {
     return null;
   }
 
-  const parsed = JSON.parse(cached);
-
-  return {
-    id: parsed.id,
-    url: parsed.url,
-    expiresAt: parsed.expiresAt ? new Date(parsed.expiresAt) : null,
-    slug,
-  };
-}
-
-export async function getBySlug(
-  slug: string,
-  options: { useCache?: boolean } = { useCache: true },
-) {
-  if (options?.useCache) {
-    try {
-      const cached = await getFromCache(slug);
-
-      if (cached) {
-        logger.debug({ slug }, "cache hit");
-
-        return cached;
-      }
-    } catch (err) {
-      logger.warn({ err }, "Redis error, falling back to DB.");
-    }
+  try {
+    return linkSchema.parse(JSON.parse(cached));
+  } catch (err) {
+    throw new MalformedCachedLinkError(undefined, cached, {
+      cause: err,
+    });
   }
-
-  logger.debug({ slug }, "cache miss");
-
-  const [link] = await db.select().from(links).where(eq(links.slug, slug));
-
-  return link;
 }
 
-export async function writeToCache(link: {
-  id: number;
-  slug: string;
-  url: string;
-  expiresAt: Date | null;
-}) {
-  return redis.setex(
+export async function getBySlugFromDb(slug: string): Promise<Link | null> {
+  const link = await db.query.links.findFirst({
+    where: eq(links.slug, slug),
+  });
+
+  return link ?? null;
+}
+
+export async function writeToCache(link: Link): Promise<void> {
+  await redis.setex(
     getCacheKey(link.slug),
     env.LINK_CACHE_TTL_SECONDS,
-    JSON.stringify({ id: link.id, url: link.url, expiresAt: link.expiresAt }),
+    JSON.stringify(link),
   );
 }
 
-export async function getById(id: number) {
-  return db.query.links.findFirst({ where: eq(links.id, id) });
+export async function getById(id: number): Promise<Link | null> {
+  const link = await db.query.links.findFirst({ where: eq(links.id, id) });
+
+  return link ?? null;
+}
+export async function deleteFromCache(slug: string) {
+  await redis.del(getCacheKey(slug));
 }
