@@ -2,7 +2,7 @@ import { ZodTypeProvider } from "@fastify/type-provider-zod";
 import { FastifyInstance } from "fastify";
 import z from "zod";
 import { getLinkById } from "../links.service.js";
-import { getLinkAnalytics } from "./analytics.service.js";
+import * as analyticsService from "./analytics.service.js";
 
 export async function analyticsRoutes(app: FastifyInstance) {
   const routes = app.withTypeProvider<ZodTypeProvider>();
@@ -34,7 +34,7 @@ export async function analyticsRoutes(app: FastifyInstance) {
         return reply.notFound("Link not found");
       }
 
-      const analytics = await getLinkAnalytics(linkId);
+      const analytics = await analyticsService.getByLinkId(linkId);
 
       return reply.send(analytics);
     },

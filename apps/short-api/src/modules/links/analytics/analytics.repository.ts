@@ -3,7 +3,7 @@ import { clicks } from "../../../db/schema.js";
 import { db } from "../../../db/index.js";
 import type { Metric } from "./analytics.types.js";
 
-export async function getMetricsByLinkId(linkId: number): Promise<Metric[]> {
+export async function getByLinkId(linkId: number): Promise<Metric[]> {
   // GROUPING SETS computes 4 aggregations in a single query, avoiding multiple DB round-trips
   return db.execute(sql`
     WITH filtered AS (

@@ -11,5 +11,5 @@ export async function createLink(
   requesterUserId: number | null = null,
   link: Partial<CreateLinkInput> = {},
 ): Promise<Link> {
-  return LinksService.createLink({ ...defaultLink, ...link }, requesterUserId);
+  return LinksService.create({ ...defaultLink, ...link }, requesterUserId);
 }

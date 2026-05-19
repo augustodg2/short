@@ -12,7 +12,7 @@ const generateSlug = customAlphabet(
   8,
 );
 
-export async function createLink(
+export async function create(
   { url, expiresAt }: CreateLinkInput,
   requesterUserId: number | null,
 ) {
@@ -56,7 +56,7 @@ async function getBySlug(
   return linkRepository.getBySlugFromDb(slug);
 }
 
-export async function resolveLink(
+export async function resolve(
   slug: string,
   options: { useCache?: boolean } = { useCache: true },
 ): Promise<{ id: number; url: string } | null> {

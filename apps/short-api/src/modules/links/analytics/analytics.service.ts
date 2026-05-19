@@ -3,8 +3,8 @@ import * as analyticsRepository from "./analytics.repository.js";
 import { LinkAnalytics } from "./analytics.types.js";
 import { formatAnalytics } from "./helpers/format-analytics.js";
 
-export async function getLinkAnalytics(linkId: number): Promise<LinkAnalytics> {
-  const metrics = await analyticsRepository.getMetricsByLinkId(linkId);
+export async function getByLinkId(linkId: number): Promise<LinkAnalytics> {
+  const metrics = await analyticsRepository.getByLinkId(linkId);
 
   return formatAnalytics(metrics);
 }

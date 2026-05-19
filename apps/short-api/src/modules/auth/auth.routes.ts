@@ -6,12 +6,7 @@ import {
   refreshSessionInputSchema,
   registerUserInputSchema,
 } from "./auth.schema.js";
-import {
-  deleteRefreshToken,
-  login,
-  refreshSession,
-  registerUser,
-} from "./auth.service.js";
+import * as authService from "./auth.service.js";
 import { EmailAlreadyInUseError } from "./errors/EmailAlreadyInUseError.js";
 import { InvalidCredentialsError } from "./errors/InvalidCredentialsError.js";
 import { InvalidRefreshTokenError } from "./errors/InvalidRefreshTokenError.js";
@@ -31,7 +26,7 @@ export async function authRoutes(app: FastifyInstance) {
     },
     async (request, reply) => {
       try {
-        const tokens = await registerUser(request.body);
+        const tokens = await authService.register(request.body);
 
         return tokens;
       } catch (error) {
@@ -56,7 +51,7 @@ export async function authRoutes(app: FastifyInstance) {
     },
     async (request, reply) => {
       try {
-        const tokens = await login(request.body);
+        const tokens = await authService.login(request.body);
 
         return tokens;
       } catch (error) {
@@ -81,7 +76,7 @@ export async function authRoutes(app: FastifyInstance) {
     },
     async (request, reply) => {
       try {
-        const tokens = await refreshSession(request.body.refreshToken);
+        const tokens = await authService.refresh(request.body.refreshToken);
 
         return tokens;
       } catch (error) {
@@ -105,7 +100,7 @@ export async function authRoutes(app: FastifyInstance) {
       },
     },
     async (request) => {
-      await deleteRefreshToken(request.body.refreshToken);
+      await authService.logout(request.body.refreshToken);
     },
   );
 }
