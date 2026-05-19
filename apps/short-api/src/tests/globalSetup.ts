@@ -1,7 +1,7 @@
 import { PostgreSqlContainer } from "@testcontainers/postgresql";
 import { RedisContainer } from "@testcontainers/redis";
-import { migrate } from "drizzle-orm/postgres-js/migrator";
 import { drizzle } from "drizzle-orm/postgres-js";
+import { migrate } from "drizzle-orm/postgres-js/migrator";
 import postgres from "postgres";
 
 async function setupDb() {
@@ -34,11 +34,9 @@ async function setupRedis() {
 }
 
 export async function setup() {
-  const stopDb = await setupDb();
-  const stopRedis = await setupRedis();
+  const [stopDb, stopRedis] = await Promise.all([setupDb(), setupRedis()]);
 
   return async () => {
-    await stopDb();
-    await stopRedis();
+    await Promise.all([stopDb, stopRedis]);
   };
 }

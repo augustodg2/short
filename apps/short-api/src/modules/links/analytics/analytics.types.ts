@@ -12,6 +12,6 @@ export type Metric = {
 export type LinkAnalytics = {
   totalClicks: number;
   clicksByCountry: AggregateMetric[];
-  clicksByReferer: AggregateMetric[];
+  clicksByReferrer: AggregateMetric[];
   clicksByDevice: AggregateMetric[];
 };

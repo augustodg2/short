@@ -4,7 +4,7 @@ export default defineConfig({
   test: {
     environment: "node",
     fileParallelism: false,
-    globalSetup: "./src/tests/helpers/globalSetup.ts",
+    globalSetup: "./src/tests/globalSetup.ts",
     coverage: {
       provider: "v8",
       reporter: ["text", "html"],

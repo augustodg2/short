@@ -4,11 +4,11 @@ import { env } from "../../config/env.js";
 import { Link } from "../../db/entities.js";
 import { db } from "../../db/index.js";
 import { links } from "../../db/schema.js";
-import { linkSchema } from "./links.schema.js";
 import { MalformedCachedLinkError } from "./errors/MalformedCachedLinkError.js";
+import { linkSchema } from "./links.schema.js";
 
 export async function create(
-  linkValues: Pick<Link, "slug" | "url" | "expiresAt">,
+  linkValues: Pick<Link, "slug" | "url" | "expiresAt" | "userId">,
 ): Promise<Link> {
   const [link] = await db.insert(links).values(linkValues).returning();
 

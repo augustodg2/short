@@ -13,7 +13,7 @@ export function formatAnalytics(metrics: Metric[]): LinkAnalytics {
   return {
     totalClicks: metrics.find((metric) => metric.type === "total")?.count ?? 0,
     clicksByCountry: aggregate("country"),
-    clicksByReferer: aggregate("referrer"),
+    clicksByReferrer: aggregate("referrer"),
     clicksByDevice: aggregate("device"),
   };
 }

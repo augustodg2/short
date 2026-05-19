@@ -2,10 +2,9 @@ import { customAlphabet } from "nanoid";
 import { Link } from "../../db/entities.js";
 import { logger } from "../../lib/logger.js";
 import { ExpiredLinkError } from "./errors/ExpiredLinkError.js";
+import { MalformedCachedLinkError } from "./errors/MalformedCachedLinkError.js";
 import * as linkRepository from "./links.repository.js";
 import { CreateLinkInput } from "./links.schema.js";
-import { ZodError } from "zod";
-import { MalformedCachedLinkError } from "./errors/MalformedCachedLinkError.js";
 
 const generateSlug = customAlphabet(
   // Excludes: 0, O, o, l, 1, I (ambiguous characters)
@@ -13,11 +12,15 @@ const generateSlug = customAlphabet(
   8,
 );
 
-export async function createLink({ url, expiresAt }: CreateLinkInput) {
+export async function createLink(
+  { url, expiresAt }: CreateLinkInput,
+  requesterUserId: number | null,
+) {
   return linkRepository.create({
     slug: generateSlug(),
     url,
     expiresAt,
+    userId: requesterUserId,
   });
 }
 
@@ -36,6 +39,11 @@ async function getBySlug(
       }
     } catch (err) {
       if (err instanceof MalformedCachedLinkError) {
+        logger.warn(
+          { slug, cachedValue: err.cachedLink },
+          "Malformed link found in cache, will delete key.",
+        );
+
         await linkRepository.deleteFromCache(slug);
       }
 

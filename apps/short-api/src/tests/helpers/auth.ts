@@ -1,23 +1,25 @@
-import { FastifyInstance } from "fastify";
+import * as authService from "../../modules/auth/auth.service.js";
 
-export async function registerUser(
-  app: FastifyInstance,
-  {
-    email,
-    password,
-  }: {
-    email: string;
-    password: string;
-  } = {
-    email: "user@example.com",
-    password: "Password@123",
-  },
-) {
-  const res = await app.inject({
-    method: "POST",
-    url: "/auth/register",
-    payload: { email, password, confirmPassword: password },
-  });
+const defaultUser = {
+  email: "user@example.com",
+  password: "Password@123",
+};
 
-  return res.json().accessToken;
+export async function createUserAndLogin(userOverrides?: {
+  email?: string;
+  password?: string;
+}) {
+  const userInput = {
+    ...defaultUser,
+    ...userOverrides,
+  };
+
+  const user = await authService.createUser(userInput);
+
+  const tokens = await authService.generateTokens(user);
+
+  return {
+    ...tokens,
+    ...user,
+  };
 }
